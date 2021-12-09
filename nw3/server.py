@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 
 import torch
 from torch import nn
+from torch.utils.data import Dataset, DataLoader
 
 app = Flask(__name__, static_url_path="/static")
 device = "cpu"
@@ -24,7 +25,8 @@ class GameDataset(Dataset):
                         -d["state"]["dx"],
                         d["state"]["dy"],
                     ]
-                    self._data.append([state, d["p1_action"] + 1])
+                    if d["p1_action"] != 0:
+                        self._data.append([state, d["p1_action"] + 1])
                 if winner == 2:
                     state = [
                         d["state"]["y1"],
@@ -34,13 +36,15 @@ class GameDataset(Dataset):
                         d["state"]["dx"],
                         d["state"]["dy"],
                     ]
-                    self._data.append([state, d["p2_action"] + 1])
+                    if d["p2_action"] != 0:
+                        self._data.append([state, d["p2_action"] + 1])
+        print(f"Loaded {len(self._data)} items")
 
     def __len__(self):
         return len(self._data)
 
     def __getitem__(self, idx):
-        return self._data[idx][0], self._data[idx][1]
+        return torch.tensor(self._data[idx][0]), torch.tensor(self._data[idx][1])
 
 
 @app.route("/move", methods=["POST"])
@@ -78,30 +82,41 @@ def end_game():
     )
 
 
-@app.route("/move", methods=["POST"])
-def move():
-    x = torch.tensor(list(request.json.values()))
-    action = 0
-    with torch.no_grad():
-        pred = model(x)
-        action = pred.argmax(0).item() - 1
+@app.route("/train", methods=["POST"])
+def train():
 
-    return jsonify(
-        {
-            "action": action,
-        }
-    )
+    training_data = GameDataset(start=0, end=len(_GAMES))
+    dataloader = DataLoader(training_data, batch_size=8, shuffle=True)
+
+    loss_fn = nn.CrossEntropyLoss()
+    size = len(dataloader.dataset)
+    for batch, (X, y) in enumerate(dataloader):
+        pred = model(X)
+        print(f"pred={pred}, y={y}")
+        loss = loss_fn(pred, y)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        if batch % 10 == 0:
+            loss, current = loss.item(), batch * len(X)
+            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
+    return jsonify({})
 
 
 class NeuralNetwork(nn.Module):
     def __init__(self):
         super(NeuralNetwork, self).__init__()
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(6, 512),
+            nn.Linear(6, 256),
             nn.ReLU(),
-            nn.Linear(512, 512),
+            nn.Linear(256, 256),
             nn.ReLU(),
-            nn.Linear(512, 3),
+            nn.Linear(256, 256),
+            nn.ReLU(),
+            nn.Linear(256, 3),
         )
 
     def forward(self, x):
@@ -112,7 +127,7 @@ class NeuralNetwork(nn.Module):
 if __name__ == "__main__":
     print("Initializing network")
     model = NeuralNetwork().to(device)
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)
 
     print(model)
 

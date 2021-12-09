@@ -184,6 +184,19 @@ let start_game = async () => {
   }
 };
 
+let train = async () => {
+  $.ajax({
+    type: "POST",
+    url: "/train",
+    data : JSON.stringify({}),
+    contentType : 'application/json',
+    success: (data) => {
+      console.log(data);
+    },
+    async: false,
+  });
+};
+
 (async () => {
   clear();
   display();
