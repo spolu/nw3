@@ -1,0 +1,54 @@
+html, body {
+  background-color: black;
+  color: white;
+  overflow: hidden;
+  font-family: monospace;
+}
+
+h1 {
+  margin-left: 10px;
+  font-family: monospace;
+  font-weight: normal;
+}
+
+p#help {
+  margin-top: 20px;
+  color: green;
+}
+
+#pong {
+  margin-left: 10px;
+  position: relative;
+  width: 800px;
+  height: 600px;
+  background-color: #222;
+  overflow: hidden;
+}
+
+#p1 {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 3px;
+  height: 80px;
+  background-color: white;
+}
+
+#p2 {
+  position: absolute;
+  top: 0px;
+  left: 797px;
+  width: 3px;
+  height: 80px;
+  background-color: white;
+}
+
+#ball {
+  position: absolute;
+  top: 295px;
+  left: 395px;
+  width: 10px;
+  height: 10px;
+  background-color: red;
+  border-radius: 5px;
+}
