@@ -6,14 +6,17 @@ from torch.utils.data import Dataset, DataLoader
 
 app = Flask(__name__, static_url_path="/static")
 device = "cpu"
+model = None
+optimizer = None
 
 _GAMES = []
 
 
 class GameDataset(Dataset):
-    def __init__(self, start, end):
+    def __init__(self, split):
         self._data = []
-        for g in _GAMES[start:end]:
+        i = 0
+        for g in _GAMES:
             winner = g[-1]["winner"]
             for d in g[:-1]:
                 if winner == 1:
@@ -25,8 +28,9 @@ class GameDataset(Dataset):
                         -d["state"]["dx"],
                         d["state"]["dy"],
                     ]
-                    if d["p1_action"] != 0:
-                        self._data.append([state, d["p1_action"] + 1])
+                    if (split == "train" and i % 10 != 0) or (split == "test" and i % 10 == 0):
+                        if d["p1_action"] != 0:
+                            self._data.append([state, d["p1_action"] + 1])
                 if winner == 2:
                     state = [
                         d["state"]["y1"],
@@ -36,9 +40,11 @@ class GameDataset(Dataset):
                         d["state"]["dx"],
                         d["state"]["dy"],
                     ]
-                    if d["p2_action"] != 0:
-                        self._data.append([state, d["p2_action"] + 1])
-        print(f"Loaded {len(self._data)} items")
+                    if (split == "train" and i % 10 != 0) or (split == "test" and i % 10 == 0):
+                        if d["p2_action"] != 0:
+                            self._data.append([state, d["p2_action"] + 1])
+                i += 1
+        print(f"Loaded {len(self._data)} {split} items")
 
     def __len__(self):
         return len(self._data)
@@ -49,6 +55,7 @@ class GameDataset(Dataset):
 
 @app.route("/move", methods=["POST"])
 def move():
+    global model
     d = request.json
     state = [
         d["y1"],
@@ -84,25 +91,53 @@ def end_game():
 
 @app.route("/train", methods=["POST"])
 def train():
+    global model
+    global optimizer
 
-    training_data = GameDataset(start=0, end=len(_GAMES))
-    dataloader = DataLoader(training_data, batch_size=8, shuffle=True)
+    train_data = GameDataset(split="train")
+    train_dataloader = DataLoader(train_data, batch_size=8, shuffle=True)
 
     loss_fn = nn.CrossEntropyLoss()
-    size = len(dataloader.dataset)
-    for batch, (X, y) in enumerate(dataloader):
+    size = len(train_dataloader.dataset)
+    num_batches = len(train_dataloader)
+    train_loss, correct = 0, 0
+
+    for batch, (X, y) in enumerate(train_dataloader):
         pred = model(X)
-        print(f"pred={pred}, y={y}")
+        # print(f"pred={pred}, y={y}")
         loss = loss_fn(pred, y)
+        train_loss += loss.item()
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        if batch % 10 == 0:
-            loss, current = loss.item(), batch * len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+    train_loss /= num_batches
+    print(f"Train Error: \n Avg loss: {train_loss:>8f} \n")
 
+    test_data = GameDataset(split="test")
+    test_dataloader = DataLoader(test_data, batch_size=8, shuffle=True)
+
+    size = len(test_dataloader.dataset)
+    num_batches = len(test_dataloader)
+    test_loss, correct = 0, 0
+
+    with torch.no_grad():
+        for X, y in test_dataloader:
+            pred = model(X)
+            test_loss += loss_fn(pred, y).item()
+            correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+
+    test_loss /= num_batches
+    correct /= size
+    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+
+    return jsonify({})
+
+
+@app.route("/reset", methods=["POST"])
+def reset():
+    reset_model()
     return jsonify({})
 
 
@@ -124,11 +159,16 @@ class NeuralNetwork(nn.Module):
         return logits
 
 
-if __name__ == "__main__":
-    print("Initializing network")
+def reset_model():
+    print("Resetting model")
+    global model
+    global optimizer
     model = NeuralNetwork().to(device)
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
+
+if __name__ == "__main__":
+    reset_model()
     print(model)
 
     app.run(host="0.0.0.0", debug=True)

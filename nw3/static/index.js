@@ -197,6 +197,19 @@ let train = async () => {
   });
 };
 
+let reset = async () => {
+  $.ajax({
+    type: "POST",
+    url: "/reset",
+    data : JSON.stringify({}),
+    contentType : 'application/json',
+    success: (data) => {
+      console.log(data);
+    },
+    async: false,
+  });
+}
+
 (async () => {
   clear();
   display();
@@ -209,5 +222,14 @@ document.addEventListener('keydown', (event) => {
   }
   if (code == 40) {
     _P1_ACTION = -1
+  }
+  if (code == 83) { // s
+    start_game();
+  }
+  if (code == 84) { // t
+    train();
+  }
+  if (code == 82) { // r
+    reset();
   }
 });
