@@ -9,17 +9,42 @@
       <div id="p2"></div>
       <div id="ball"></div>
     </div>
-    <p id="parameters">
-      Hyper-parameters:
-    </p>
     <table>
       <tr>
-        <td><b>temperature</b></td>
-        <td><input type="number" step="0.1" id="temperature" value="1.0"></td>
-      </tr>
-      <tr>
-        <td><b>learning_rate</b></td>
-        <td><input type="number" step="0.0001" id="learning_rate" value="0.001"></td>
+        <td>
+          <p id="parameters">
+            Hyper-parameters:
+          </p>
+          <table>
+            <tr>
+              <td><b>temperature:</b></td>
+              <td><input type="number" step="0.1" id="temperature" value="1.0"></td>
+            </tr>
+            <tr>
+              <td><b>learning_rate:</b></td>
+              <td><input type="number" step="0.0001" id="learning_rate" value="0.001"></td>
+            </tr>
+          </table>
+        </td>
+        <td>
+          <p id="parameters">
+            Train stats:
+          </p>
+          <table>
+            <tr>
+              <td><b>train_loss:</b></td>
+              <td><span id="train_loss">N/A</td>
+            </tr>
+            <tr>
+              <td><b>train_size:</b></td>
+              <td><span id="train_size">N/A</td>
+            </tr>
+            <tr>
+              <td><b>test_loss:</b></td>
+              <td><span id="test_loss">N/A</td>
+            </tr>
+          </table>
+        </td>
       </tr>
     </table>
     <p id="help">
@@ -27,7 +52,8 @@
     </p>
     <ul>
       <li><b>`s`</b> start a new game</li>
-      <li><b>`t`</b> train on all previous games for 1 epoch</li>
+      <li><b>`t`</b> train on all recorded games for 1 epoch</li>
+      <li><b>`r`</b> reset model weights (to re-train from scratch)</li>
     </ul>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"
       integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="

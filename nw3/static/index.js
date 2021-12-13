@@ -11,6 +11,7 @@ const _ACTION_DELTA = 0.04;
 const _BALL_DELTA = 0.02;
 const _BALL_PLAYER_DELTA_X = 0.005;
 
+var _ENV_ID = null;
 var _RUNNING = null;
 var _NEXT_GAME = 0;
 
@@ -81,7 +82,7 @@ let end_game = (winner) => {
   // console.log(_GAME_LOG);
   $.ajax({
     type: "POST",
-    url: "/end_game",
+    url: `/${_ENV_ID}/store_game`,
     data : JSON.stringify(_GAME_LOG),
     contentType : 'application/json',
     success: (data) => {
@@ -106,7 +107,7 @@ let loop = async () => {
   var a2 = 0;
   $.ajax({
     type: "POST",
-    url: "/move",
+    url: `/${_ENV_ID}/move`,
     data : JSON.stringify({
       state: _GAME_STATE,
       temperature: parseFloat($('#temperature').val()),
@@ -166,7 +167,7 @@ let start_game = async () => {
   clear();
   display();
 
-  var angle = Math.random() * Math.PI / 4;
+  var angle = Math.random() * Math.PI / 4 + Math.PI / 8;
   if (Math.random() < 0.5) {
     angle = -angle;
   }
@@ -188,32 +189,60 @@ let start_game = async () => {
 };
 
 let train = async () => {
+  setTimeout(() => {
+    $('#train_loss').text('training...');
+    $('#train_size').text('training...');
+    $('#test_loss').text('training...');
+  }, 10);
   $.ajax({
     type: "POST",
-    url: "/train",
+    url: `/${_ENV_ID}/train`,
     data : JSON.stringify({learning_rate: parseFloat($('#learning_rate').val())}),
     contentType : 'application/json',
     success: (data) => {
+      $('#train_loss').text(data['train_loss']);
+      $('#train_size').text(`${data['train_size']} (${data['recorded_games_count']} games)`);
+      $('#test_loss').text(data['test_loss']);
       console.log(data);
     },
-    async: false,
   });
 };
 
 let reset = async () => {
   $.ajax({
     type: "POST",
-    url: "/reset",
+    url: `/${_ENV_ID}/reset`,
     data : JSON.stringify({}),
     contentType : 'application/json',
     success: (data) => {
-      console.log(data);
+      $('#train_loss').text('N/A');
+      $('#train_size').text('N/A');
+      $('#test_loss').text('N/A');
     },
-    async: false,
   });
 }
 
+let setup = async () => {
+  if (window.location.hash == '') {
+    $.ajax({
+      type: "POST",
+      url: "/create",
+      data : JSON.stringify({}),
+      contentType : 'application/json',
+      success: (data) => {
+        console.log(`create_env: env_id=${data["env_id"]}`);
+        window.location.hash = data["env_id"];
+        _ENV_ID = data["env_id"];
+      },
+    });
+  } else {
+    _ENV_ID = window.location.hash.substr(1);
+    console.log(`load_env: env_id=${_ENV_ID}`);
+  }
+}
+
 (async () => {
+  await setup();
   clear();
   display();
 })();
