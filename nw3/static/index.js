@@ -107,7 +107,10 @@ let loop = async () => {
   $.ajax({
     type: "POST",
     url: "/move",
-    data : JSON.stringify(_GAME_STATE),
+    data : JSON.stringify({
+      state: _GAME_STATE,
+      temperature: parseFloat($('#temperature').val()),
+    }),
     contentType : 'application/json',
     success: (data) => {
       a2 = data['action'];
@@ -188,7 +191,7 @@ let train = async () => {
   $.ajax({
     type: "POST",
     url: "/train",
-    data : JSON.stringify({}),
+    data : JSON.stringify({learning_rate: parseFloat($('#learning_rate').val())}),
     contentType : 'application/json',
     success: (data) => {
       console.log(data);
